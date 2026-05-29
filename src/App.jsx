@@ -1,4 +1,4 @@
-import { Activity, ChevronsRight, Flag, Gauge, Radio, Trophy, Wrench } from "lucide-react";
+import { Activity, ChevronsRight, Flag, Gauge, Radio, Trophy, Wrench, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
 import { circuits } from "./data/circuits";
 import { teams } from "./data/teams";
@@ -223,6 +223,28 @@ function App() {
                 <MetricCard label="Strategy Rating" value={result.strategyRating} detail={`${result.strategyScore}/100`} icon={Radio} />
                 <MetricCard label="Driver Performance Rating" value={result.driverPerformanceRating} detail={`${result.driverScore}/100`} icon={Trophy} />
                 <MetricCard label="Race Chaos Level" value={`${result.raceChaosLevel}%`} detail="broadcast panic index" icon={Activity} />
+              </div>
+
+              <div className="regulation-panel">
+                <div className="regulation-heading">
+                  <Zap size={18} aria-hidden="true" />
+                  <h3>2026 Regulation Chaos</h3>
+                </div>
+                {result.regulationChaosEvents.length === 0 ? (
+                  <p className="regulation-clear">No major new-rule weirdness this time. Suspiciously normal.</p>
+                ) : (
+                  <div className="regulation-events">
+                    {result.regulationChaosEvents.map((event) => (
+                      <article key={`${event.type}-${event.severity}`} className="regulation-event">
+                        <div>
+                          <strong>{event.type}</strong>
+                          <span>Severity {event.severity}/100</span>
+                        </div>
+                        <p>{event.effect}</p>
+                      </article>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <blockquote className="quote">{result.quote}</blockquote>
