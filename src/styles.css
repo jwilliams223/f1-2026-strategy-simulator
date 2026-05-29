@@ -335,6 +335,74 @@ select:focus {
   font-size: 0.86rem;
 }
 
+.regulation-panel {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(225, 6, 0, 0.35);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(225, 6, 0, 0.18), transparent),
+    #090b11;
+}
+
+.regulation-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: #ff4a45;
+}
+
+.regulation-heading h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.regulation-clear {
+  margin: 0;
+  color: #d8dbe2;
+  line-height: 1.5;
+}
+
+.regulation-events {
+  display: grid;
+  gap: 10px;
+}
+
+.regulation-event {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.regulation-event div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.regulation-event strong {
+  color: #fff;
+}
+
+.regulation-event span {
+  color: #ffb4b1;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.regulation-event p {
+  margin: 0;
+  color: #d8dbe2;
+  line-height: 1.45;
+}
+
 .quote {
   margin: 18px 0 0;
   padding: 18px;
@@ -401,6 +469,11 @@ select:focus {
   .two-column,
   .metric-grid {
     grid-template-columns: 1fr;
+  }
+
+  .regulation-event div {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   h1 {
