@@ -2,6 +2,8 @@
 
 A playful React + Vite race strategy simulator for the 2026 Formula 1 season.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jwilliams223/f1-2026-strategy-simulator&project-name=f1-2026-strategy-simulator&repository-name=f1-2026-strategy-simulator)
+
 ## Run locally
 
 ```bash
@@ -28,11 +30,10 @@ This project is ready for Vercel as a Vite app. Vercel should auto-detect the sa
 
 Click-only path:
 
-1. Push this folder to a GitHub repository.
-2. Open `https://vercel.com/new`.
-3. Select the GitHub repository.
-4. Keep the detected Vite settings.
-5. Click **Deploy**.
+1. Click the **Deploy with Vercel** button above.
+2. Choose your Vercel account/team.
+3. Keep the detected Vite settings.
+4. Click **Deploy**.
 
 ## Project structure
 
