@@ -27,6 +27,63 @@ const fastCornerTracks = new Set(["japan", "great-britain", "qatar", "belgium"])
 const safetyCarTracks = new Set(["singapore", "saudi-arabia", "azerbaijan", "canada", "brazil"]);
 const tyreStressTracks = new Set(["bahrain", "spain-barcelona", "qatar", "great-britain"]);
 
+const regulationEvents = [
+  {
+    type: "Engine Mode Issue",
+    log: "2026 regulation chaos: engine mode mapping is arguing with reality.",
+    effect: "Race pace trimmed, engineers say it is temporary with suspicious confidence.",
+    chaos: 10,
+    reliability: 9,
+    performance: -5,
+    strategy: -2
+  },
+  {
+    type: "Battery Deployment Problem",
+    log: "2026 regulation chaos: battery deployment arrives early, leaves early, explains nothing.",
+    effect: "Straight-line attack is weaker and defending gets awkward.",
+    chaos: 12,
+    reliability: 6,
+    performance: -6,
+    strategy: -1
+  },
+  {
+    type: "Cooling Issue",
+    log: "2026 regulation chaos: cooling numbers are turning into modern art.",
+    effect: "Lift-and-coast instructions appear on the radio.",
+    chaos: 9,
+    reliability: 13,
+    performance: -4,
+    strategy: -1
+  },
+  {
+    type: "DRS Train",
+    log: "2026 regulation chaos: a DRS train forms and everyone forgets how overtaking works.",
+    effect: "Track position becomes sticky, especially in the midfield.",
+    chaos: 7,
+    reliability: 1,
+    performance: -3,
+    strategy: 1
+  },
+  {
+    type: "Fuel Saving",
+    log: "2026 regulation chaos: fuel saving mode activated, lap time dignity deactivated.",
+    effect: "Pace drops while the pit wall whispers about targets.",
+    chaos: 8,
+    reliability: 3,
+    performance: -4,
+    strategy: -3
+  },
+  {
+    type: "Brake Overheating",
+    log: "2026 regulation chaos: brake temperatures are entering the dramatic arts.",
+    effect: "Mistake risk rises under braking and kerbs suddenly look personal.",
+    chaos: 11,
+    reliability: 8,
+    performance: -4,
+    strategy: -1
+  }
+];
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -50,8 +107,25 @@ function labelRating(score) {
   return "D";
 }
 
+function buildRegulationChaosEvents({ circuit, team, weather, raceMode }) {
+  let eventChance = 0.72;
+  if (weather !== "Dry") eventChance += 0.12;
+  if (raceMode === "Chaotic" || raceMode === "Safety Car Madness") eventChance += 0.1;
+  if (team.id === "audi" || team.id === "cadillac") eventChance += 0.1;
+  if (circuit.weights.reliability || circuit.weights.chaos) eventChance += 0.08;
+
+  const eventCount = Math.random() > eventChance ? 0 : Math.random() > 0.72 ? 2 : 1;
+  const shuffledEvents = [...regulationEvents].sort(() => Math.random() - 0.5);
+
+  return shuffledEvents.slice(0, eventCount).map((event) => ({
+    ...event,
+    severity: Math.round(randomBetween(45, 96))
+  }));
+}
+
 function getDriverBonus(driver, team, raceMode) {
   let bonus = 0;
+
   if (driver === "Max Verstappen") bonus += 8;
   if (driver === "Lewis Hamilton" || driver === "Fernando Alonso") bonus += 4;
   if (driver === "Charles Leclerc") bonus += 3;
@@ -59,6 +133,7 @@ function getDriverBonus(driver, team, raceMode) {
   if (driver === "Carlos Sainz" || driver === "Alexander Albon") bonus += 2;
   if (driver === "Fernando Alonso" && raceMode === "Chaotic") bonus += 7;
   if (team.id === "red-bull" && driver === "Max Verstappen") bonus += 5;
+
   return bonus;
 }
 
@@ -86,7 +161,7 @@ function getTrackFit(team, circuit) {
   return fit;
 }
 
-function buildRaceLog({ circuit, team, driver, raceMode, weather, laps, chaosLevel, safetyCarProbability }) {
+function buildRaceLog({ circuit, team, driver, raceMode, weather, laps, chaosLevel, safetyCarProbability, regulationChaosEvents }) {
   const genericLogs = [
     "The tyres are already questioning your life choices.",
     "Your engineer says Plan B. Nobody knows what Plan A was.",
@@ -100,6 +175,7 @@ function buildRaceLog({ circuit, team, driver, raceMode, weather, laps, chaosLev
   ];
 
   const specialLogs = [];
+
   if (team.id === "ferrari" || raceMode === "Ferrari Strategy Disaster") {
     specialLogs.push("Ferrari pit wall is calculating something suspicious.");
     specialLogs.push("A strategy window appears. It immediately becomes a strategy door.");
@@ -108,31 +184,50 @@ function buildRaceLog({ circuit, team, driver, raceMode, weather, laps, chaosLev
     specialLogs.push("Haas radio traffic has entered cinematic mode.");
     specialLogs.push("Somehow this is either genius or tomorrow's meme template.");
   }
-  if (driver === "Fernando Alonso") specialLogs.push("Alonso has gained places through pure tactical sorcery.");
+  if (driver === "Fernando Alonso") {
+    specialLogs.push("Alonso has gained places through pure tactical sorcery.");
+  }
   if (circuit.id === "austria") specialLogs.push("Track limits warning. Austria moment.");
   if (hardToPass.has(circuit.id)) specialLogs.push("Overtaking attempt cancelled by geography.");
   if (lowDragTracks.has(circuit.id)) specialLogs.push("Slipstream train forming at deeply inconvenient speed.");
   if (weather !== "Dry") specialLogs.push("Rain radar says maybe. Everyone panics like definitely.");
   if (safetyCarProbability > 55) specialLogs.push("Safety Car deployed because someone parked creatively.");
   if (chaosLevel > 75) specialLogs.push("The timing tower has stopped making emotional sense.");
+  regulationChaosEvents.forEach((event) => specialLogs.push(event.log));
 
   const pool = [...specialLogs, ...genericLogs];
   const logs = [];
+
   for (let lap = 5; lap < laps; lap += 5) {
-    logs.push(`Lap ${lap}: ${pool[Math.floor(Math.random() * pool.length)]}`);
+    const message = pool[Math.floor(Math.random() * pool.length)];
+    logs.push(`Lap ${lap}: ${message}`);
   }
+
   logs.push("Final Lap: The race director is sweating.");
   return logs;
 }
 
 function buildInterviewQuote({ team, driver, raceMode, finalPosition, startPosition }) {
   const gained = startPosition - finalPosition;
-  if (raceMode === "Ferrari Strategy Disaster" && team.id === "ferrari") return `${driver}: "We will discuss it internally. Very internally. Maybe underground."`;
-  if (raceMode === "Haas Masterclass" && team.id === "haas" && gained > 6) return `${driver}: "I don't know what happened, but please keep doing exactly that."`;
-  if (driver === "Fernando Alonso" && gained > 0) return `${driver}: "Experience is not magic. But today it was close enough."`;
-  if (finalPosition <= 3) return `${driver}: "Mega result. The strategy team can have dessert tonight."`;
-  if (finalPosition > 18) return `${driver}: "Difficult race. The car had character, mostly in the wrong places."`;
-  if (gained > 4) return `${driver}: "We maximized the chaos. That is technically a strategy."`;
+
+  if (raceMode === "Ferrari Strategy Disaster" && team.id === "ferrari") {
+    return `${driver}: "We will discuss it internally. Very internally. Maybe underground."`;
+  }
+  if (raceMode === "Haas Masterclass" && team.id === "haas" && gained > 6) {
+    return `${driver}: "I don't know what happened, but please keep doing exactly that."`;
+  }
+  if (driver === "Fernando Alonso" && gained > 0) {
+    return `${driver}: "Experience is not magic. But today it was close enough."`;
+  }
+  if (finalPosition <= 3) {
+    return `${driver}: "Mega result. The strategy team can have dessert tonight."`;
+  }
+  if (finalPosition > 18) {
+    return `${driver}: "Difficult race. The car had character, mostly in the wrong places."`;
+  }
+  if (gained > 4) {
+    return `${driver}: "We maximized the chaos. That is technically a strategy."`;
+  }
   return `${driver}: "Solid race. We learned things, including several things we did not request."`;
 }
 
@@ -144,9 +239,19 @@ export function simulateRace({ circuit, team, driver, tyre, weather, startPositi
   const driverBonus = getDriverBonus(driver, team, raceMode);
   const startPenalty = (startPosition - 1) * (hardToPass.has(circuit.id) ? 2.25 : 1.25);
   const overtakingBoost = (circuit.weights.overtaking || 1) * 7;
+  const regulationChaosEvents = buildRegulationChaosEvents({ circuit, team, weather, raceMode });
+  const regulationImpact = regulationChaosEvents.reduce(
+    (totals, event) => ({
+      chaos: totals.chaos + event.chaos * (event.severity / 100),
+      reliability: totals.reliability + event.reliability * (event.severity / 100),
+      performance: totals.performance + event.performance * (event.severity / 100),
+      strategy: totals.strategy + event.strategy * (event.severity / 100)
+    }),
+    { chaos: 0, reliability: 0, performance: 0, strategy: 0 }
+  );
 
   // Chaos drives the entertainment layer: mistakes, wild swings, and strange logs.
-  let chaosLevel = 25 + team.stats.chaos * 0.28 + weatherProfile.chaos + modeProfile.chaos;
+  let chaosLevel = 25 + team.stats.chaos * 0.28 + weatherProfile.chaos + modeProfile.chaos + regulationImpact.chaos;
   if (circuit.weights.chaos) chaosLevel += circuit.weights.chaos * 8;
   if (raceMode === "Haas Masterclass" && team.id === "haas") chaosLevel += 18;
   chaosLevel = clamp(Math.round(chaosLevel + randomBetween(-8, 10)), 0, 100);
@@ -160,23 +265,30 @@ export function simulateRace({ circuit, team, driver, tyre, weather, startPositi
   if (tyreStressTracks.has(circuit.id)) tyreDegRisk += 14;
   tyreDegRisk = clamp(Math.round(tyreDegRisk + randomBetween(-7, 8)), 0, 100);
 
-  let reliabilityRisk = 100 - team.stats.reliability + weatherProfile.reliability + modeProfile.reliability;
+  let reliabilityRisk = 100 - team.stats.reliability + weatherProfile.reliability + modeProfile.reliability + regulationImpact.reliability;
   if (team.id === "cadillac") reliabilityRisk += 16;
   if (team.id === "audi") reliabilityRisk += 10;
   if (circuit.weights.reliability) reliabilityRisk += circuit.weights.reliability * 5;
   reliabilityRisk = clamp(Math.round(reliabilityRisk + randomBetween(-5, 9)), 0, 100);
 
-  let strategyScore = team.stats.strategy + modeProfile.strategy - tyreDegRisk * 0.18 + safetyCarProbability * 0.08;
+  let strategyScore = team.stats.strategy + modeProfile.strategy + regulationImpact.strategy - tyreDegRisk * 0.18 + safetyCarProbability * 0.08;
   if (raceMode === "Ferrari Strategy Disaster" && team.id === "ferrari") strategyScore -= randomBetween(18, 35);
   if (raceMode === "Safety Car Madness") strategyScore += randomBetween(-8, 14);
   if (team.id === "mercedes") strategyScore += 5;
   strategyScore = clamp(Math.round(strategyScore), 0, 100);
 
   const randomness = randomBetween(-10, 10) + (chaosLevel / 100) * randomBetween(-14, 14);
-  let performanceScore = trackFit + driverBonus + tyreProfile.pace + overtakingBoost - startPenalty + strategyScore * 0.15 - reliabilityRisk * 0.18 + randomness;
-  if (raceMode === "Haas Masterclass" && team.id === "haas") performanceScore += Math.random() > 0.52 ? randomBetween(18, 34) : randomBetween(-22, -8);
-  if (raceMode === "Ferrari Strategy Disaster" && team.id === "ferrari") performanceScore -= randomBetween(8, 22);
-  if (team.id === "mercedes") performanceScore += randomBetween(-4, 5);
+  let performanceScore = trackFit + driverBonus + tyreProfile.pace + overtakingBoost - startPenalty + strategyScore * 0.15 - reliabilityRisk * 0.18 + regulationImpact.performance + randomness;
+
+  if (raceMode === "Haas Masterclass" && team.id === "haas") {
+    performanceScore += Math.random() > 0.52 ? randomBetween(18, 34) : randomBetween(-22, -8);
+  }
+  if (raceMode === "Ferrari Strategy Disaster" && team.id === "ferrari") {
+    performanceScore -= randomBetween(8, 22);
+  }
+  if (team.id === "mercedes") {
+    performanceScore += randomBetween(-4, 5);
+  }
 
   const projectedGain = Math.round((performanceScore - 72) / (hardToPass.has(circuit.id) ? 7 : 5));
   const incidentLoss = Math.random() * 100 < reliabilityRisk * 0.25 ? Math.ceil(randomBetween(2, 8)) : 0;
@@ -204,7 +316,18 @@ export function simulateRace({ circuit, team, driver, tyre, weather, startPositi
     driverPerformanceRating: labelRating(driverRating),
     driverScore: driverRating,
     raceChaosLevel: chaosLevel,
+    regulationChaosEvents,
     quote: buildInterviewQuote({ team, driver, raceMode, finalPosition, startPosition }),
-    raceLog: buildRaceLog({ circuit, team, driver, raceMode, weather, laps: circuit.laps, chaosLevel, safetyCarProbability })
+    raceLog: buildRaceLog({
+      circuit,
+      team,
+      driver,
+      raceMode,
+      weather,
+      laps: circuit.laps,
+      chaosLevel,
+      safetyCarProbability,
+      regulationChaosEvents
+    })
   };
 }
